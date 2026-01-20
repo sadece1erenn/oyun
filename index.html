@@ -1689,6 +1689,20 @@ if (!checkCollision(testPosZ)) {
         toolHandle.rotation.z = -0.5;
         toolHead.rotation.z = -0.5;
       }
+	  // Update all other players' UI elements to face camera
+otherPlayers.forEach((otherPlayer) => {
+  if (otherPlayer.nameTag) {
+    otherPlayer.nameTag.lookAt(camera.position);
+  }
+  
+  if (otherPlayer.healthBarBg) {
+    otherPlayer.healthBarBg.lookAt(camera.position);
+  }
+  
+  if (otherPlayer.healthBarFill) {
+    otherPlayer.healthBarFill.lookAt(camera.position);
+  }
+});
       
       renderer.render(scene, camera);
     }
@@ -1885,12 +1899,6 @@ if (data.health !== undefined) {
     otherPlayer.healthBarFill.material.color.setHex(0xff0000);
   }
 }
-
-// Make health bar always face camera
-if (otherPlayer.healthBarBg) {
-  otherPlayer.healthBarBg.lookAt(camera.position);
-  otherPlayer.healthBarFill.lookAt(camera.position);
-}
     nameTag.position.y = 2.3;
     playerModel.add(nameTag);
     
@@ -1929,10 +1937,17 @@ if (otherPlayer.healthBarBg) {
   
   otherPlayer.lastUpdate = Date.now();
   
-  // Make name tag always face camera
-  if (otherPlayer.nameTag) {
-    otherPlayer.nameTag.lookAt(camera.position);
-  }
+// Make name tag and health bar always face camera
+if (otherPlayer.nameTag) {
+  otherPlayer.nameTag.lookAt(camera.position);
+}
+
+if (otherPlayer.healthBarBg) {
+  otherPlayer.healthBarBg.lookAt(camera.position);
+}
+
+if (otherPlayer.healthBarFill) {
+  otherPlayer.healthBarFill.lookAt(camera.position);
 }
     
     function removeOtherPlayer(name) {
