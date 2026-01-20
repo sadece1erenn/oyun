@@ -1713,18 +1713,25 @@ function connectMultiplayer() {
       
       // Send join message
 ws.send(JSON.stringify({
-  type: 'join',
+  type: 'update',
   name: playerName,
   position: {
-    x: playerGroup.position.x,
-    y: playerGroup.position.y,
-    z: playerGroup.position.z
+    x: Math.round(playerGroup.position.x * 100) / 100,
+    y: Math.round(playerGroup.position.y * 100) / 100,
+    z: Math.round(playerGroup.position.z * 100) / 100
   },
-  rotation: { y: yaw },
+  rotation: { y: Math.round(yaw * 100) / 100 },
   gameTime: gameTime,
   secretMode: secretMode,
   inCar: inCar,
-  headlightsOn: headlightsOn
+  headlightsOn: headlightsOn,
+  health: playerHealth,
+  carPosition: inCar ? {
+    x: Math.round(carGroup.position.x * 100) / 100,
+    y: Math.round(carGroup.position.y * 100) / 100,
+    z: Math.round(carGroup.position.z * 100) / 100
+  } : null,
+  carRotation: inCar ? { y: Math.round(carGroup.rotation.y * 100) / 100 } : null
 }));
       
       console.log('Connected to multiplayer server');
@@ -1885,6 +1892,56 @@ function updateOtherPlayer(data) {
   if (otherPlayer.nameTag) {
     otherPlayer.nameTag.lookAt(camera.position);
   }
+  // Create car for this player
+const otherCarGroup = new THREE.Group();
+const otherCarBody = new THREE.Mesh(
+  new THREE.BoxGeometry(2, 0.8, 4),
+  new THREE.MeshStandardMaterial({ color: 0x3333ff, metalness: 0.6, roughness: 0.4 })
+);
+otherCarBody.position.y = 0.9;
+otherCarBody.castShadow = true;
+otherCarGroup.add(otherCarBody);
+
+const otherCarRoof = new THREE.Mesh(
+  new THREE.BoxGeometry(1.6, 0.7, 2),
+  new THREE.MeshStandardMaterial({ color: 0x3333ff, metalness: 0.6, roughness: 0.4 })
+);
+otherCarRoof.position.set(0, 1.65, -0.3);
+otherCarRoof.castShadow = true;
+otherCarGroup.add(otherCarRoof);
+
+otherCarGroup.visible = false;
+scene.add(otherCarGroup);
+
+scene.add(playerModel);
+otherPlayers.set(data.name, {
+  model: playerModel,
+  car: otherCarGroup,
+  nameTag: nameTag,
+  healthBarBg: healthBarBg,
+  healthBarFill: healthBarFill,
+  health: 100,
+  lastUpdate: Date.now()
+});
+
+// Update car
+if (data.inCar && data.carPosition && data.carRotation) {
+  otherPlayer.car.visible = true;
+  otherPlayer.model.visible = false;
+  otherPlayer.car.position.set(data.carPosition.x, data.carPosition.y, data.carPosition.z);
+  otherPlayer.car.rotation.y = data.carRotation.y;
+  
+  // Move name tag and health bar to car
+  otherPlayer.nameTag.position.copy(otherPlayer.car.position);
+  otherPlayer.nameTag.position.y += 3;
+  otherPlayer.healthBarBg.position.copy(otherPlayer.car.position);
+  otherPlayer.healthBarBg.position.y += 2.7;
+  otherPlayer.healthBarFill.position.copy(otherPlayer.car.position);
+  otherPlayer.healthBarFill.position.y += 2.71;
+} else {
+  otherPlayer.car.visible = false;
+  otherPlayer.model.visible = true;
+}
 }
     
     function removeOtherPlayer(name) {
