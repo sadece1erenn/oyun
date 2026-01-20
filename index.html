@@ -59,6 +59,36 @@
       font-weight: bold;
       text-shadow: 2px 2px 4px #000;
     }
+	#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+#crosshair::before,
+#crosshair::after {
+  content: '';
+  position: absolute;
+  background: white;
+  box-shadow: 0 0 2px black;
+}
+#crosshair::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+#crosshair::after {
+  left: 50%;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  transform: translateX(-50%);
+}
   </style>
 </head>
 <body>
@@ -85,6 +115,8 @@
     <div id="health-fill"></div>
     <div id="health-text">100 / 100</div>
   </div>
+  
+  <div id="crosshair"></div>
   
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
@@ -139,7 +171,7 @@ for (let i = 0; i < 15; i++) {
     let isThirdPerson = false;
     let playerHealth = 100;
     let gameTime = 6; // 6 AM
-    const timeSpeed = 0.005; // Faster day/night cycle (about 8 minutes per full day)
+    const timeSpeed = 0.002; // Faster day/night cycle (about 8 minutes per full day)
     let isRaining = false;
     const raindrops = [];
     let isJumping = false;
@@ -185,57 +217,83 @@ const interiorLight3 = new THREE.PointLight(0xffeecc, 1, 8);
 interiorLight3.position.set(3, 3, -3);
 scene.add(interiorLight3);
 
-    function updateDayNightCycle() {
-      gameTime += timeSpeed;
-      if (gameTime >= 24) gameTime = 0;
-      
-      const hours = Math.floor(gameTime);
-      const minutes = Math.floor((gameTime % 1) * 60);
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHour = hours % 12 || 12;
-      document.getElementById('clock').textContent = 
-        `Time: ${String(displayHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
-      
-      // Night time: 8 PM to 6 AM (20:00 to 6:00)
-      const isNight = gameTime >= 20 || gameTime < 6;
-      const wasNight = (gameTime - timeSpeed >= 20) || (gameTime - timeSpeed < 6);
-      
-      // Check if day/night changed to start/stop ambient sounds
-      if (isNight && !wasNight) {
-        startAmbientSounds(true);
-      } else if (!isNight && wasNight) {
-        startAmbientSounds(false);
-      }
-      
-      if (isNight) {
-        const nightIntensity = 0.1;
-        sun.intensity = nightIntensity;
-        ambientLight.intensity = 0.1;
-        scene.background.setHex(0x0a0a1a);
-        scene.fog.color.setHex(0x0a0a1a);
-        sun.color.setHex(0x9999ff);
-        
-        // Rain at night
-        if (!isRaining && Math.random() < 0.001) {
-          startRain();
-        }
-      } else {
-        // Day time
-        const dayProgress = (gameTime - 6) / 14; // 6 AM to 8 PM
-        sun.intensity = 0.8 + Math.sin(dayProgress * Math.PI) * 0.4;
-        ambientLight.intensity = 0.3 + Math.sin(dayProgress * Math.PI) * 0.2;
-        scene.background.setHex(0x87ceeb);
-        scene.fog.color.setHex(0x87ceeb);
-        sun.color.setHex(0xffeaa7);
-        
-        if (isRaining) stopRain();
-      }
-      
-      // Update sun position
-      const sunAngle = (gameTime / 24) * Math.PI * 2 - Math.PI / 2;
-      sun.position.x = Math.cos(sunAngle) * 50;
-      sun.position.y = Math.sin(sunAngle) * 100 + 20;
-    }
+function updateDayNightCycle() {
+  gameTime += timeSpeed;
+  if (gameTime >= 24) gameTime = 0;
+  
+  const hours = Math.floor(gameTime);
+  const minutes = Math.floor((gameTime % 1) * 60);
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  document.getElementById('clock').textContent = 
+    `Time: ${String(displayHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+  
+  // Smooth transitions
+  const isNight = gameTime >= 20 || gameTime < 6;
+  const isDawn = gameTime >= 5 && gameTime < 7;
+  const isDusk = gameTime >= 18 && gameTime < 20;
+  
+  if (isNight && !isDawn && !isDusk) {
+    // Deep night
+    sun.intensity = 0.1;
+    ambientLight.intensity = 0.05;
+    scene.background.setHex(0x0a0a1a);
+    scene.fog.color.setHex(0x0a0a1a);
+    sun.color.setHex(0x9999ff);
+  } else if (isDawn) {
+    // Sunrise
+    const dawnProgress = (gameTime - 5) / 2;
+    sun.intensity = 0.1 + dawnProgress * 1.1;
+    ambientLight.intensity = 0.05 + dawnProgress * 0.35;
+    const skyColor = lerpColor(0x0a0a1a, 0x87ceeb, dawnProgress);
+    scene.background.setHex(skyColor);
+    scene.fog.color.setHex(skyColor);
+    const sunColor = lerpColor(0x9999ff, 0xffeaa7, dawnProgress);
+    sun.color.setHex(sunColor);
+  } else if (isDusk) {
+    // Sunset
+    const duskProgress = (gameTime - 18) / 2;
+    sun.intensity = 1.2 - duskProgress * 1.1;
+    ambientLight.intensity = 0.4 - duskProgress * 0.35;
+    const skyColor = lerpColor(0x87ceeb, 0x0a0a1a, duskProgress);
+    scene.background.setHex(skyColor);
+    scene.fog.color.setHex(skyColor);
+    const sunColor = lerpColor(0xffeaa7, 0xff6b4a, duskProgress);
+    sun.color.setHex(sunColor);
+  } else {
+    // Day time
+    const dayProgress = (gameTime - 7) / 11;
+    sun.intensity = 0.8 + Math.sin(dayProgress * Math.PI) * 0.4;
+    ambientLight.intensity = 0.3 + Math.sin(dayProgress * Math.PI) * 0.1;
+    scene.background.setHex(0x87ceeb);
+    scene.fog.color.setHex(0x87ceeb);
+    sun.color.setHex(0xffeaa7);
+    
+    if (isRaining) stopRain();
+  }
+  
+  // Update sun position
+  const sunAngle = (gameTime / 24) * Math.PI * 2 - Math.PI / 2;
+  sun.position.x = Math.cos(sunAngle) * 50;
+  sun.position.y = Math.sin(sunAngle) * 100 + 20;
+}
+
+// Helper function for smooth color transitions
+function lerpColor(color1, color2, t) {
+  const r1 = (color1 >> 16) & 0xff;
+  const g1 = (color1 >> 8) & 0xff;
+  const b1 = color1 & 0xff;
+  
+  const r2 = (color2 >> 16) & 0xff;
+  const g2 = (color2 >> 8) & 0xff;
+  const b2 = color2 & 0xff;
+  
+  const r = Math.floor(r1 + (r2 - r1) * t);
+  const g = Math.floor(g1 + (g2 - g1) * t);
+  const b = Math.floor(b1 + (b2 - b1) * t);
+  
+  return (r << 16) | (g << 8) | b;
+}
 
     /* ================= WEATHER SYSTEM ================= */
     function startRain() {
@@ -743,10 +801,50 @@ if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") {
     const leafMat = new THREE.MeshStandardMaterial({ color: 0x3a7d3a });
 
     /* Ground */
-    const ground = new THREE.Mesh(
-      new THREE.BoxGeometry(100, 0.5, 100),
-      grassMat
-    );
+// Create grass texture programmatically
+const grassCanvas = document.createElement('canvas');
+grassCanvas.width = 256;
+grassCanvas.height = 256;
+const grassCtx = grassCanvas.getContext('2d');
+
+// Base grass color
+grassCtx.fillStyle = '#3a5a2a';
+grassCtx.fillRect(0, 0, 256, 256);
+
+// Add grass blades
+for (let i = 0; i < 3000; i++) {
+  const x = Math.random() * 256;
+  const y = Math.random() * 256;
+  const shade = Math.floor(Math.random() * 40) - 20;
+  grassCtx.fillStyle = `rgb(${58 + shade}, ${90 + shade}, ${42 + shade})`;
+  grassCtx.fillRect(x, y, 1, 2);
+}
+
+// Add darker patches
+for (let i = 0; i < 50; i++) {
+  const x = Math.random() * 256;
+  const y = Math.random() * 256;
+  grassCtx.fillStyle = 'rgba(30, 50, 20, 0.3)';
+  grassCtx.fillRect(x, y, 10, 10);
+}
+
+const grassTexture = new THREE.CanvasTexture(grassCanvas);
+grassTexture.wrapS = THREE.RepeatWrapping;
+grassTexture.wrapT = THREE.RepeatWrapping;
+grassTexture.repeat.set(20, 20);
+
+const detailedGrassMat = new THREE.MeshStandardMaterial({ 
+  map: grassTexture,
+  roughness: 0.9
+});
+
+const ground = new THREE.Mesh(
+  new THREE.BoxGeometry(200, 0.5, 200), // Bigger world!
+  detailedGrassMat
+);
+ground.position.y = -0.25;
+ground.receiveShadow = true;
+scene.add(ground);
     ground.position.y = -0.25;
     ground.receiveShadow = true;
     scene.add(ground);
@@ -764,6 +862,29 @@ if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") {
       collisionBoxes.push(new THREE.Box3().setFromObject(stone));
       voxelData.push({ mesh: stone, x, y, z, type: 'stone' });
     }
+	
+	// Small cottage
+function createCottage(x, z) {
+  for (let cx = x - 3; cx <= x + 3; cx++) {
+    for (let cz = z - 3; cz <= z + 3; cz++) {
+      if (cx === x - 3 || cx === x + 3 || cz === z - 3 || cz === z + 3) {
+        for (let y = 1; y <= 3; y++) {
+          createStoneBlock(cx, y, cz, (cx + y) % 2);
+        }
+      }
+    }
+  }
+  // Roof
+  for (let cx = x - 4; cx <= x + 4; cx++) {
+    for (let cz = z - 4; cz <= z + 4; cz++) {
+      createStoneBlock(cx, 4, cz, 1);
+    }
+  }
+}
+
+createCottage(30, 30);
+createCottage(-35, 25);
+createCottage(25, -30);
 
 // Foundation - NO collision inside!
 for (let x = -6; x <= 6; x++) {
@@ -1113,6 +1234,177 @@ const treePositions = [
 
     /* ================= MONSTERS ================= */
     const monsters = [];
+	// Animals
+const animals = [];
+
+function createSheep(x, z) {
+  const sheepGroup = new THREE.Group();
+  
+  // Body
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.6, 1.2),
+    new THREE.MeshStandardMaterial({ color: 0xeeeeee })
+  );
+  body.position.y = 0.5;
+  body.castShadow = true;
+  sheepGroup.add(body);
+  
+  // Head
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0xdddddd })
+  );
+  head.position.set(0, 0.6, 0.7);
+  head.castShadow = true;
+  sheepGroup.add(head);
+  
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+  
+  const leg1 = new THREE.Mesh(legGeo, legMat);
+  leg1.position.set(-0.3, 0.2, -0.4);
+  leg1.castShadow = true;
+  sheepGroup.add(leg1);
+  
+  const leg2 = leg1.clone();
+  leg2.position.set(0.3, 0.2, -0.4);
+  sheepGroup.add(leg2);
+  
+  const leg3 = leg1.clone();
+  leg3.position.set(-0.3, 0.2, 0.4);
+  sheepGroup.add(leg3);
+  
+  const leg4 = leg1.clone();
+  leg4.position.set(0.3, 0.2, 0.4);
+  sheepGroup.add(leg4);
+  
+  sheepGroup.position.set(x, 0, z);
+  scene.add(sheepGroup);
+  
+  animals.push({
+    group: sheepGroup,
+    type: 'sheep',
+    wanderAngle: Math.random() * Math.PI * 2,
+    wanderTimer: 0
+  });
+}
+
+function createHorse(x, z) {
+  const horseGroup = new THREE.Group();
+  
+  // Body
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.8, 1.5),
+    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+  );
+  body.position.y = 0.8;
+  body.castShadow = true;
+  horseGroup.add(body);
+  
+  // Neck
+  const neck = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.8, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x8b4513 })
+  );
+  neck.position.set(0, 1.2, 0.8);
+  neck.rotation.x = -0.3;
+  neck.castShadow = true;
+  horseGroup.add(neck);
+  
+  // Head
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.5, 0.6),
+    new THREE.MeshStandardMaterial({ color: 0x7a3d0f })
+  );
+  head.position.set(0, 1.6, 1.1);
+  head.castShadow = true;
+  horseGroup.add(head);
+  
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.15, 0.8, 0.15);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x654321 });
+  
+  const leg1 = new THREE.Mesh(legGeo, legMat);
+  leg1.position.set(-0.2, 0.4, -0.6);
+  leg1.castShadow = true;
+  horseGroup.add(leg1);
+  
+  const leg2 = leg1.clone();
+  leg2.position.set(0.2, 0.4, -0.6);
+  horseGroup.add(leg2);
+  
+  const leg3 = leg1.clone();
+  leg3.position.set(-0.2, 0.4, 0.5);
+  horseGroup.add(leg3);
+  
+  const leg4 = leg1.clone();
+  leg4.position.set(0.2, 0.4, 0.5);
+  horseGroup.add(leg4);
+  
+  // Tail
+  const tail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.6, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0x654321 })
+  );
+  tail.position.set(0, 0.9, -0.8);
+  tail.rotation.x = 0.5;
+  tail.castShadow = true;
+  horseGroup.add(tail);
+  
+  horseGroup.position.set(x, 0, z);
+  scene.add(horseGroup);
+  
+  animals.push({
+    group: horseGroup,
+    type: 'horse',
+    wanderAngle: Math.random() * Math.PI * 2,
+    wanderTimer: 0
+  });
+}
+
+// Spawn animals around the world
+for (let i = 0; i < 8; i++) {
+  const angle = (i / 8) * Math.PI * 2;
+  const distance = 25 + Math.random() * 30;
+  createSheep(
+    Math.cos(angle) * distance,
+    Math.sin(angle) * distance
+  );
+}
+
+for (let i = 0; i < 5; i++) {
+  const angle = (i / 5) * Math.PI * 2;
+  const distance = 30 + Math.random() * 35;
+  createHorse(
+    Math.cos(angle) * distance,
+    Math.sin(angle) * distance
+  );
+}
+
+// Animal AI
+function updateAnimals() {
+  animals.forEach(animal => {
+    animal.wanderTimer++;
+    
+    if (animal.wanderTimer > 120) {
+      animal.wanderAngle += (Math.random() - 0.5) * 0.5;
+      animal.wanderTimer = 0;
+    }
+    
+    const speed = animal.type === 'horse' ? 0.03 : 0.02;
+    animal.group.position.x += Math.cos(animal.wanderAngle) * speed;
+    animal.group.position.z += Math.sin(animal.wanderAngle) * speed;
+    animal.group.rotation.y = animal.wanderAngle;
+    
+    // Keep in bounds
+    const maxDist = 80;
+    const dist = Math.sqrt(animal.group.position.x ** 2 + animal.group.position.z ** 2);
+    if (dist > maxDist) {
+      animal.wanderAngle = Math.atan2(-animal.group.position.z, -animal.group.position.x);
+    }
+  });
+}
     const monsterSpeed = 0.05;
     let lastMonsterSpawn = 0;
 	// SECRET: K key for monster head transformation
@@ -1228,6 +1520,7 @@ if (secretMode) {
     }
 
     function updateMonsters() {
+	updateAnimals();
       const isNight = gameTime >= 20 || gameTime < 6;
       
       if (isNight && Date.now() - lastMonsterSpawn > 5000 && monsters.length < 10) {
@@ -1489,6 +1782,7 @@ function checkCollision(newPos) {
 
     function animate() {
 	// Update clouds
+	updateAnimals();
 clouds.forEach(cloud => {
   cloud.group.position.x += cloud.speed;
   if (cloud.group.position.x > 50) {
