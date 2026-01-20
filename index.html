@@ -2136,7 +2136,7 @@ ws.send(JSON.stringify({
     
     ws.onclose = () => {
       isConnected = false;
-      document.getElementById('mp-status').textContent = 'Status: Disconnected';
+      document.getElementById('mp-status').textContent = 'Status: Disconnected (Becuase i closed the server lol)';
       document.getElementById('mp-status').style.color = '#ff0000';
       console.log('Disconnected from server');
     };
