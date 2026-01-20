@@ -1857,21 +1857,19 @@ function updateOtherPlayer(data) {
       new THREE.PlaneGeometry(2, 0.5),
       new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
     );
-	// Health bar background
+// Health bar background (add to scene, not player model)
 const healthBarBg = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 0.1),
-  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7 })
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
 );
-healthBarBg.position.y = 2;
-playerModel.add(healthBarBg);
+scene.add(healthBarBg);
 
-// Health bar fill
+// Health bar fill (add to scene, not player model)
 const healthBarFill = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 0.08),
-  new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+  new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide })
 );
-healthBarFill.position.set(0, 2, 0.01);
-playerModel.add(healthBarFill);
+scene.add(healthBarFill);
 
 scene.add(playerModel);
 otherPlayers.set(data.name, {
@@ -1922,7 +1920,32 @@ if (data.health !== undefined) {
   if (data.rotation) {
     otherPlayer.model.rotation.y = data.rotation.y;
   }
-  
+  // Update car visibility and position
+if (data.inCar && data.carPosition && data.carRotation) {
+  otherPlayer.car.visible = true;
+  otherPlayer.model.visible = false;
+  otherPlayer.car.position.set(data.carPosition.x, data.carPosition.y, data.carPosition.z);
+  otherPlayer.car.rotation.y = data.carRotation.y;
+} else {
+  otherPlayer.car.visible = false;
+  otherPlayer.model.visible = true;
+}
+
+// Always update UI positions based on current player/car position
+const uiBasePos = (data.inCar && data.carPosition) ? 
+  new THREE.Vector3(data.carPosition.x, data.carPosition.y, data.carPosition.z) :
+  new THREE.Vector3(data.position.x, data.position.y, data.position.z);
+
+otherPlayer.nameTag.position.copy(uiBasePos);
+otherPlayer.nameTag.position.y += data.inCar ? 3 : 2.3;
+
+otherPlayer.healthBarBg.position.copy(uiBasePos);
+otherPlayer.healthBarBg.position.y += data.inCar ? 2.7 : 2;
+
+otherPlayer.healthBarFill.position.copy(uiBasePos);
+otherPlayer.healthBarFill.position.y += data.inCar ? 2.7 : 2;
+otherPlayer.healthBarFill.position.z += 0.01;
+
   // NEW: Apply secret mode from other player
   if (data.secretMode !== undefined) {
     monsters.forEach(monster => {
