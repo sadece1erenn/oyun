@@ -1689,20 +1689,6 @@ if (!checkCollision(testPosZ)) {
         toolHandle.rotation.z = -0.5;
         toolHead.rotation.z = -0.5;
       }
-	  // Update all other players' UI elements to face camera
-otherPlayers.forEach((otherPlayer) => {
-  if (otherPlayer.nameTag) {
-    otherPlayer.nameTag.lookAt(camera.position);
-  }
-  
-  if (otherPlayer.healthBarBg) {
-    otherPlayer.healthBarBg.lookAt(camera.position);
-  }
-  
-  if (otherPlayer.healthBarFill) {
-    otherPlayer.healthBarFill.lookAt(camera.position);
-  }
-});
       
       renderer.render(scene, camera);
     }
@@ -1857,46 +1843,6 @@ function updateOtherPlayer(data) {
       new THREE.PlaneGeometry(2, 0.5),
       new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
     );
-// Health bar background (add to scene, not player model)
-const healthBarBg = new THREE.Mesh(
-  new THREE.PlaneGeometry(1, 0.1),
-  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
-);
-scene.add(healthBarBg);
-
-// Health bar fill (add to scene, not player model)
-const healthBarFill = new THREE.Mesh(
-  new THREE.PlaneGeometry(1, 0.08),
-  new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide })
-);
-scene.add(healthBarFill);
-
-scene.add(playerModel);
-otherPlayers.set(data.name, {
-  model: playerModel,
-  nameTag: nameTag,
-  healthBarBg: healthBarBg,
-  healthBarFill: healthBarFill,
-  health: 100,
-  lastUpdate: Date.now()
-});
-
-// Update health bar
-if (data.health !== undefined) {
-  otherPlayer.health = data.health;
-  const healthPercent = data.health / 100;
-  otherPlayer.healthBarFill.scale.x = healthPercent;
-  otherPlayer.healthBarFill.position.x = (healthPercent - 1) * 0.5;
-  
-  // Change color based on health
-  if (healthPercent > 0.5) {
-    otherPlayer.healthBarFill.material.color.setHex(0x00ff00);
-  } else if (healthPercent > 0.25) {
-    otherPlayer.healthBarFill.material.color.setHex(0xffff00);
-  } else {
-    otherPlayer.healthBarFill.material.color.setHex(0xff0000);
-  }
-}
     nameTag.position.y = 2.3;
     playerModel.add(nameTag);
     
@@ -1920,32 +1866,7 @@ if (data.health !== undefined) {
   if (data.rotation) {
     otherPlayer.model.rotation.y = data.rotation.y;
   }
-  // Update car visibility and position
-if (data.inCar && data.carPosition && data.carRotation) {
-  otherPlayer.car.visible = true;
-  otherPlayer.model.visible = false;
-  otherPlayer.car.position.set(data.carPosition.x, data.carPosition.y, data.carPosition.z);
-  otherPlayer.car.rotation.y = data.carRotation.y;
-} else {
-  otherPlayer.car.visible = false;
-  otherPlayer.model.visible = true;
-}
-
-// Always update UI positions based on current player/car position
-const uiBasePos = (data.inCar && data.carPosition) ? 
-  new THREE.Vector3(data.carPosition.x, data.carPosition.y, data.carPosition.z) :
-  new THREE.Vector3(data.position.x, data.position.y, data.position.z);
-
-otherPlayer.nameTag.position.copy(uiBasePos);
-otherPlayer.nameTag.position.y += data.inCar ? 3 : 2.3;
-
-otherPlayer.healthBarBg.position.copy(uiBasePos);
-otherPlayer.healthBarBg.position.y += data.inCar ? 2.7 : 2;
-
-otherPlayer.healthBarFill.position.copy(uiBasePos);
-otherPlayer.healthBarFill.position.y += data.inCar ? 2.7 : 2;
-otherPlayer.healthBarFill.position.z += 0.01;
-
+  
   // NEW: Apply secret mode from other player
   if (data.secretMode !== undefined) {
     monsters.forEach(monster => {
@@ -1960,17 +1881,10 @@ otherPlayer.healthBarFill.position.z += 0.01;
   
   otherPlayer.lastUpdate = Date.now();
   
-// Make name tag and health bar always face camera
-if (otherPlayer.nameTag) {
-  otherPlayer.nameTag.lookAt(camera.position);
-}
-
-if (otherPlayer.healthBarBg) {
-  otherPlayer.healthBarBg.lookAt(camera.position);
-}
-
-if (otherPlayer.healthBarFill) {
-  otherPlayer.healthBarFill.lookAt(camera.position);
+  // Make name tag always face camera
+  if (otherPlayer.nameTag) {
+    otherPlayer.nameTag.lookAt(camera.position);
+  }
 }
     
     function removeOtherPlayer(name) {
