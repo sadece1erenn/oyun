@@ -1485,6 +1485,21 @@ if (keys["KeyE"] && distanceToCar < 3) {
   } else {
     stopEngineSound();
   }
+  
+  // Immediately sync car state with friends
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'carStateChange',
+      name: playerName,
+      inCar: inCar,
+      carPosition: inCar ? {
+        x: carGroup.position.x,
+        y: carGroup.position.y,
+        z: carGroup.position.z
+      } : null,
+      carRotation: inCar ? { y: carGroup.rotation.y } : null
+    }));
+  }
 }
       
       if (inCar) {
@@ -1745,6 +1760,13 @@ ws.send(JSON.stringify({
           updateOtherPlayer(msg.player);
         }
       }
+	  
+	  if (msg.type === 'carStateChange') {
+  if (msg.name !== playerName) {
+    console.log(msg.name + ' car state changed. inCar:', msg.inCar);
+    updateOtherPlayer(msg);
+  }
+}
       
       if (msg.type === 'playerLeft') {
         removeOtherPlayer(msg.name);
