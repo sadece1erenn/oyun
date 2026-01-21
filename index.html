@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stone House Berkhan Survival - FPS/TPS</title>
+  <title>Stone House Survival - FPS/TPS</title>
   <style>
     body {
       margin: 0;
@@ -702,18 +702,21 @@ function playWalkSound() {
     const keys = {};
     const speed = 0.12;
     
-    document.addEventListener("keydown", e => {
-      keys[e.code] = true;
-      if (e.code === "KeyT") {
-	  if (e.code === "Digit1") selectedBlock = 'stone';
-if (e.code === "Digit2") selectedBlock = 'wood';
-if (e.code === "Digit3") selectedBlock = 'leaf';
-if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") {
-  updateInventoryDisplay();
-}
-        isThirdPerson = !isThirdPerson;
-      }
-    });
+document.addEventListener("keydown", e => {
+  keys[e.code] = true;
+  
+  if (e.code === "KeyT") {
+    isThirdPerson = !isThirdPerson;
+  }
+  
+  if (e.code === "Digit1") selectedBlock = 'stone';
+  if (e.code === "Digit2") selectedBlock = 'wood';
+  if (e.code === "Digit3") selectedBlock = 'leaf';
+  
+  if (e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3") {
+    updateInventoryDisplay();
+  }
+});
     document.addEventListener("keyup", e => keys[e.code] = false);
     
     document.body.addEventListener("click", () => {
@@ -847,7 +850,6 @@ ground.receiveShadow = true;
 scene.add(ground);
     ground.position.y = -0.25;
     ground.receiveShadow = true;
-    scene.add(ground);
     // Don't add ground to collision boxes - we handle ground collision separately
 
     /* Stone House */
@@ -859,7 +861,9 @@ scene.add(ground);
       stone.receiveShadow = true;
       stone.userData.type = 'stone';
       scene.add(stone);
-      collisionBoxes.push(new THREE.Box3().setFromObject(stone));
+if (x === -6 || x === 6 || z === -6 || z === 6) {
+  collisionBoxes.push(new THREE.Box3().setFromObject(stone));
+}
       voxelData.push({ mesh: stone, x, y, z, type: 'stone' });
     }
 	
@@ -1270,18 +1274,13 @@ function createSheep(x, z) {
   const leg2 = leg1.clone();
   leg2.position.set(0.3, 0.2, -0.4);
   sheepGroup.add(leg2);
-  
   const leg3 = leg1.clone();
   leg3.position.set(-0.3, 0.2, 0.4);
   sheepGroup.add(leg3);
-  
   const leg4 = leg1.clone();
   leg4.position.set(0.3, 0.2, 0.4);
   sheepGroup.add(leg4);
-  
   sheepGroup.position.set(x, 0, z);
-  scene.add(sheepGroup);
-  
   sheepGroup.userData.animalType = 'sheep';
 
 scene.add(sheepGroup);
@@ -1364,7 +1363,6 @@ function createHorse(x, z) {
   horseGroup.add(tail);
   
   horseGroup.position.set(x, 0, z);
-  scene.add(horseGroup);
   
   horseGroup.userData.animalType = 'horse';
 
@@ -1738,18 +1736,13 @@ function checkCollision(newPos) {
         const voxel = voxelData[i];
         const hits = raycaster.intersectObject(voxel.mesh);
         if (hits.length > 0 && hits[0].distance < 5) {
-          if (voxel.type === 'stone') {
-		  for (let i = voxelData.length - 1; i >= 0; i--) {
-  const voxel = voxelData[i];
-  const hits = raycaster.intersectObject(voxel.mesh);
-  if (hits.length > 0 && hits[0].distance < 5) {
-    if (voxel.type === 'stone') {
-      inventory.stone++;
-    } else if (voxel.type === 'wood') {
-      inventory.wood++;
-    } else if (voxel.type === 'leaf') {
-      inventory.leaf++;
-    }
+ if (voxel.type === 'stone') {
+  inventory.stone++;
+} else if (voxel.type === 'wood') {
+  inventory.wood++;
+} else if (voxel.type === 'leaf') {
+  inventory.leaf++;
+}
     
     // Send to server BEFORE removing
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -2065,8 +2058,8 @@ if (!checkCollision(testPosZ)) {
     
     /* ================= MULTIPLAYER SYSTEM ================= */
 function connectMultiplayer() {
-  // Replace with your Render/Railway/Fly.io URL if you want to make your own server without my github jackass
-  const serverURL = 'wss://oyun-sunucusu-1.onrender.com'; // Change this! (if you want to ruin whole multiplayer system)
+  // Replace with your Render/Railway/Fly.io URL
+  const serverURL = 'wss://oyun-sunucusu-1.onrender.com'; // Change this!
   
   try {
     ws = new WebSocket(serverURL);
@@ -2136,7 +2129,7 @@ ws.send(JSON.stringify({
     
     ws.onclose = () => {
       isConnected = false;
-      document.getElementById('mp-status').textContent = 'Status: Disconnected (Becuase i closed the server lol)';
+      document.getElementById('mp-status').textContent = 'Status: Disconnected';
       document.getElementById('mp-status').style.color = '#ff0000';
       console.log('Disconnected from server');
     };
